@@ -125,4 +125,16 @@ TASK.md    original task statement
 
 ## How AI was used
 
-<!-- to be written by the author -->
+I used AI (Claude) from start to finish. The AI wrote the specs, the code and the tests. My role was to direct the work and validate it.
+
+- **Prompt:** I drafted the initial spec-driven prompt with an AI assistant in a separate chat, from my own requirements: phases with approval gates, NestJS, a guarded routing core, tests, and a README with run/test instructions. A second chat also helped me review each phase.
+- **Process:** four phases (data profile → spec and decisions → implementation and tests → Part B). The AI stopped at each gate, and I approved or amended its decisions. All of them are logged in [specs/03-decisions.md](specs/03-decisions.md).
+- **What I corrected or pushed back on:**
+  - D-03: invalid orders still go to PARTNER; `invalid_order` is only the reason code.
+  - Output: the CLI writes routes.txt itself, because PowerShell `>` writes UTF-16.
+  - I asked for traces of #2034, #2041 and #2050, and asked again when the first answer skipped them.
+  - The golden file came from the same AI session, so I didn't treat it as independent proof.
+  - I had it confirm that the Part B answers came from a full re-run with NV off, not a one-order patch.
+  - For option 3, I required the expiry to use order time instead of the system clock, and "until Monday" to be logged as an explicit decision.
+- **How I checked it:** I hand-checked #2033 and #2050 against the raw JSON ([docs/hand-check.md](docs/hand-check.md)). The Part B answers in [specs/05-part-b.md](specs/05-part-b.md) were proposed by the AI; the final calls are mine.
+- **Conversation:** [docs/ai-conversation.md](docs/ai-conversation.md)
