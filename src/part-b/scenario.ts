@@ -116,7 +116,7 @@ export function format(r: SimDecision): string {
   return formatDecision(r.decision);
 }
 
-/** D-28 (proposed): start of Monday Oct 26, ET, exclusive. */
+/** D-28 (approved): start of Monday Oct 26, ET, exclusive. */
 export const GA_AVOID_UNTIL = '2026-10-26T00:00:00-04:00';
 
 /** Scenarios used in 05-part-b. `NV off` reflects ops note N-1 (Part B only, never Part A). */

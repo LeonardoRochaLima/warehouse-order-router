@@ -78,7 +78,7 @@ AVOID_WAREHOUSE=WH-GA AVOID_UNTIL=2026-10-26T00:00:00-04:00 npm start    # AVOID
 - **Flag off** (default): output == `routes.txt` (test). That's option 2.
 - **Flag on + NV disabled (N-1)**: exactly the 9 line changes in the option 3 row above (test: `test/avoid-policy.e2e-spec.ts`).
 - **Flag on + Part A config (NV still enabled)**: 9 lines change, but **#2035 and #2054 move to WH-NV zone 5**, which can't ship (N-1). #2051 and #2056 don't change because #2051 already went to NV. **So disable NV in config first, then turn on the flag.**
-- Orders created at or after `AVOID_UNTIL` are untouched (test). `AVOID_UNTIL` value = D-28 (**proposed**: start of Monday, ET, exclusive).
+- Orders created at or after `AVOID_UNTIL` are untouched (test). `AVOID_UNTIL` value = D-28 (**approved**: start of Monday, ET, exclusive).
 
 ### Recommendation (proposed)
 **Option 3, now shippable behind config and off by default. Option 2 is the state with the flag off.**
