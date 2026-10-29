@@ -30,6 +30,12 @@ npm run build
 npm run start:prod
 ```
 
+Part B what-if and traces (read-only; prints to stdout; never touches `routes.txt`):
+```bash
+npm run what-if -- "#2034" "#2041" "#2050"
+```
+For each listed order it prints every warehouse's zone, stock at routing time, cover and why it was or wasn't eligible. It does this under each scenario in [specs/05-part-b.md](specs/05-part-b.md) (Part A, NV off per N-1, Q2 options 1–4) and lists which lines change.
+
 Use another data folder or output file. bash:
 ```bash
 DATA_DIR=./some/folder OUTPUT_FILE=./out.txt npm start
@@ -42,7 +48,7 @@ $env:DATA_DIR="./some/folder"; $env:OUTPUT_FILE="./out.txt"; npm start
 ## Tests (Jest + @nestjs/testing)
 | what | command |
 |---|---|
-| everything (unit + e2e), 145 tests | `npm test` |
+| everything (unit + e2e), 151 tests | `npm test` |
 | unit only (`src/**/*.spec.ts`) | `npm run test:unit` |
 | e2e only (`test/*.e2e-spec.ts`: acceptance criteria + CLI run) | `npm run test:e2e` |
 | one file | `npx jest src/routing/routing.engine.spec.ts` |
@@ -66,6 +72,7 @@ The golden file `test/fixtures/expected-routes.txt` came from an independent thr
 | `src/orders/order-assembler.service.spec.ts` | edit window edges, processing order, bad events (R-09, R-10, D-15, D-21, D-26) |
 | `src/data/data-loader.service.spec.ts` | config validation, never reads ops-notes (D-24, R-16) |
 | `src/routing/routing.runner.spec.ts` | reservation between orders, invalid_order, bug guard (R-11, D-03) |
+| `src/part-b/scenario.spec.ts` | what-if scenarios reproduce Part A and the 05-part-b numbers; input never mutated |
 | `test/acceptance.e2e-spec.ts` | AC-01..AC-16 on `data/`, CLI bytes/stdout/stderr/exit codes |
 
 ## How it works
@@ -78,6 +85,10 @@ data/*.json → DataLoaderService (DTO validation) → OrderAssemblerService (ed
 - Invalid orders still get one line: `PARTNER  invalid_order`.
 - Details: [specs/04-design.md](specs/04-design.md).
 
+## Decisions log
+Every choice the task text doesn't dictate (ZIP padding, `invalid_order`, cover before reservation, edit-window edges, config errors, …) is in
+**[specs/03-decisions.md](specs/03-decisions.md)** as D-00..D-27, with options, recommendation, impact on today's data and status. The code cites these ids in comments (`// R-06, D-12`).
+
 ## Specs (the documentation)
 | file | contents |
 |---|---|
@@ -86,13 +97,17 @@ data/*.json → DataLoaderService (DTO validation) → OrderAssemblerService (ed
 | [specs/02-requirements.md](specs/02-requirements.md) | Order model, pipeline, R-xx (GIVEN/WHEN/THEN), reason codes, acceptance criteria |
 | [specs/03-decisions.md](specs/03-decisions.md) | **decisions log D-xx**: every choice the task text doesn't dictate |
 | [specs/04-design.md](specs/04-design.md) | module layout, signatures, data flow, guard rails |
-| `specs/05-part-b.md` | Part B answers (Phase 4) |
+| [specs/05-part-b.md](specs/05-part-b.md) | Part B: ops-note windows, Q1 options per order (proposed), Q2 option comparison, call prep |
 
 ## Layout
 ```
 data/      input files, copied unchanged (ops-notes.md is Part B only; the router never reads it)
-src/       domain/ (pure TS) · data/ · orders/ · routing/ · main.ts
+src/       domain/ (pure TS) · data/ · orders/ · routing/ · main.ts · part-b/ (what-if, read-only)
 test/      e2e acceptance tests + golden fixture
 specs/     spec-driven docs
 TASK.md    original task statement
 ```
+
+## How AI was used
+
+<!-- to be written by the author -->
