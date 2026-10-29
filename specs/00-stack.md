@@ -37,7 +37,7 @@ The loader never reads `ops-notes.md`, and a test checks that.
 
 ## Test entry points (the "file to run the tests")
 - `package.json` scripts: `test` (all), `test:unit`, `test:e2e`, `test:cov`, `test:watch`.
-- `jest.config.ts` (unit) + `test/jest-e2e.config.ts` (e2e), following the Nest CLI layout.
+- One `jest.config.js` with two projects, `unit` and `e2e` (`--selectProjects`). ts-jest only transpiles (`isolatedModules`); `npm run typecheck` checks the types.
 - Test files: `src/**/*.spec.ts` (unit, next to the code), `test/*.e2e-spec.ts` (e2e).
 
 **D-00 test runner: Jest + `@nestjs/testing`. Approved (Phase 1 review).**

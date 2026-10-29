@@ -1,0 +1,2 @@
+# Force LF everywhere so routes.txt and the golden fixture stay byte-identical on Windows checkouts.
+* text=auto eol=lf

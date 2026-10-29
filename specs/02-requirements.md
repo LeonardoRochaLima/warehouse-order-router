@@ -49,8 +49,8 @@ events (file) → validate DTOs → group by orderNumber → apply valid edits (
 | R-11 | §P | an order routed to a warehouse | right after the decision | that warehouse's `available` drops by each line's qty. Later orders see the lower stock. PARTNER reserves nothing |
 | R-12 | "messy data" | raw country / ZIP / SKU | normalizing | per D-02, D-04, D-06 |
 | R-13 | catalog | a line whose SKU is a bundle | expanding | replaced by its components × line qty, recursively, with cycle and depth guards (D-07). Then same-SKU lines are summed (D-08) |
-| R-14 | "prints one line per order" | every order | printing | one stdout line per order in processing order: `orderNumber␣␣target␣␣reason`. Nothing else on stdout (D-16, D-22) |
-| R-15 | guard rails | any malformed record | running | the run never crashes. The record becomes `PARTNER invalid_order` (if it's an order) or is ignored and logged (if it's an event). Exit code 0. Exit code ≠0 only when a file is missing or unparseable |
+| R-14 | "prints one line per order" | every order | printing | one line per order in processing order: `orderNumber␣␣target␣␣reason`. The CLI writes them to `routes.txt` (UTF-8, LF) **and** to stdout. Logs go only to stderr (D-16, D-22) |
+| R-15 | guard rails | any malformed record | running | the run never crashes. The record becomes `PARTNER invalid_order` (if it's an order) or is ignored and logged (if it's an event). Exit code 0. Exit code 2 when a file is missing or unparseable, or a config file is invalid (D-24). Exit code 1 only for a bug (guard rail layer 4) |
 | R-16 | determinism | the same inputs | run twice | byte-identical output. `ops-notes.md` is never read |
 
 ### Reason codes (fixed enum)
