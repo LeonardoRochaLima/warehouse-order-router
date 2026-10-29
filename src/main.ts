@@ -9,6 +9,7 @@ import { StderrLogger } from './common/stderr.logger';
 import { DataLoaderService } from './data/data-loader.service';
 import { ConfigError } from './domain/errors';
 import { formatDecision } from './domain/route-decision';
+import { parseAvoidPolicy } from './routing/avoid-policy';
 import { RoutingRunner } from './routing/routing.runner';
 
 async function bootstrap(): Promise<number> {
@@ -18,12 +19,17 @@ async function bootstrap(): Promise<number> {
   });
   const logger = new Logger('router');
   try {
+    const config = app.get(ConfigService);
     const input = app.get(DataLoaderService).load();
-    const { decisions, warnings } = app.get(RoutingRunner).run(input);
+    const avoid = parseAvoidPolicy((k) => config.get<string>(k), input.warehouses.map((w) => w.code)); // D-29
+    if (avoid) {
+      logger.warn(`avoid policy ON: ${avoid.code} for orders created before ${avoid.until.toISOString()}, max +${avoid.maxZoneDelta} zone`);
+    }
+    const { decisions, warnings } = app.get(RoutingRunner).run(input, avoid);
     warnings.forEach((w) => logger.warn(w));
 
     const text = decisions.map(formatDecision).join('\n') + '\n'; // D-16
-    const outFile = resolve(app.get(ConfigService).get<string>('OUTPUT_FILE') ?? 'routes.txt');
+    const outFile = resolve(config.get<string>('OUTPUT_FILE') ?? 'routes.txt');
     writeFileSync(outFile, text, { encoding: 'utf8' }); // D-16: UTF-8 without BOM, LF
     process.stdout.write(text);
     return 0;

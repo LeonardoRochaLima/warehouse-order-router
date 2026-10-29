@@ -50,7 +50,7 @@ describe('Part B scenarios (05-part-b)', () => {
   });
 
   it('Q2-3: moves an order off GA only when the alternative is ≤ 1 zone farther', () => {
-    expect(lineOf('Q2-3', '#2041')).toBe('#2041  WH-NJ  zone 8  [moved off WH-GA (zone 7)]');
+    expect(lineOf('Q2-3', '#2041')).toBe('#2041  WH-NJ  zone 8 (avoid: WH-GA)');
     expect(lineOf('Q2-3', '#2045')).toBe('#2045  WH-GA  zone 3'); // NJ short on MAG
   });
 

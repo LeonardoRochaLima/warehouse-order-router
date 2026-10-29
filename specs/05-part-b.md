@@ -68,11 +68,20 @@ GA picking delay (N-2) ≈ **+2 business days** on every GA order.
 |---|---|---|---|---|---|
 | **1. GA off until Monday** | 18 lines change. **8 domestic orders become `PARTNER no_stock`** (#2036, #2039, #2043, #2045, #2049, #2052, #2054, #2056): with NV down (N-1), NJ has only 2 MAG, so GA is the **only real MAG source**. The rest move to NJ at z5–z8 | NJ 15 · PARTNER 11 | **Contradicts N-4's premise** (it assumes alternatives exist; for MAG they don't today). Not needed per N-2 ("Everything is going out") | sends domestic orders to the international partner (cost unknown); NJ empties fast; N-4 itself says +2 days/+$2.35 for 70%, roughly the same as the 2-day GA delay it tries to avoid | config flip (easy), but orders already sent to PARTNER can't be pulled back |
 | **2. Keep GA as normal** | none (baseline). 15 orders at GA, each ~2 days late. #2056 → no_stock (§1) | NJ 7 · GA 15 · PARTNER 4 | none | customers wait ~2 extra days (N-2), which is what Marco wants to avoid (N-3) | nothing to undo |
-| **3. Avoid GA only if another warehouse is within 1 zone** | 9 lines change. **5 moved off GA** to NJ at +0–1 zone: #2034 (z5→z5), #2041 (z7→z8), #2044 (z6→z7), #2051 (z7→z8), #2055 (z8→z8). **Knock-on effects:** #2034 uses one of NJ's 2 MAG, so #2039 drops from NJ z1 to GA z5 (worse) and #2040 rises from GA z5 to NJ z2 (better); #2050 gets GA z1 (now has VITD, but late); #2056 is saved (no_stock → GA z5) | NJ 11 · GA 12 · PARTNER 3 | none. It's the 30% case in N-4 (+0.5 day, +$0.40 vs +2 days); today 5/15 = 33% of GA orders, close to Priya's 30% | **new code** (a rule the router doesn't have; ours is only a what-if wrapper); moving off GA can burn scarce stock elsewhere (#2034 → #2039 above); needs an end date | feature flag with an expiry (Mon Oct 26); turn it off and it's back to option 2. Code change + review needed first |
+| **3. Avoid GA only if another warehouse is within 1 zone** | 9 lines change. **5 moved off GA** to NJ at +0–1 zone: #2034 (z5→z5), #2041 (z7→z8), #2044 (z6→z7), #2051 (z7→z8), #2055 (z8→z8). **Knock-on effects:** #2034 uses one of NJ's 2 MAG, so #2039 drops from NJ z1 to GA z5 (worse) and #2040 rises from GA z5 to NJ z2 (better); #2050 gets GA z1 (now has VITD, but late); #2056 is saved (no_stock → GA z5) | NJ 11 · GA 12 · PARTNER 3 | none. It's the 30% case in N-4 (+0.5 day, +$0.40 vs +2 days); today 5/15 = 33% of GA orders, close to Priya's 30% | moving off GA can burn scarce stock elsewhere (#2034 → #2039 above); **must ship together with NV disabled** (see §3a) | **shippable now** (R-17, D-29): unset `AVOID_WAREHOUSE` → option 2. It expires on its own at `AVOID_UNTIL` (order time, D-28) |
 | **4. GA off, NV back on** | 19 lines change. **11 orders sent to NV** (#2035, #2036, #2038, #2039, #2043, #2045, #2049, #2051, #2052, #2054, #2056) | NJ 12 · NV 11 · PARTNER 3 | **Directly contradicts N-1** ("Nothing can ship from NV until further notice") | 11 parcels sent to a flooded warehouse: no shipment, no fallback | config flip, but those orders sit at NV until someone re-routes them by hand. **Worst option** |
 
+### 3a. Option 3 in the router (R-17, D-28, D-29)
+```bash
+AVOID_WAREHOUSE=WH-GA AVOID_UNTIL=2026-10-26T00:00:00-04:00 npm start    # AVOID_MAX_ZONE_DELTA defaults to 1
+```
+- **Flag off** (default): output == `routes.txt` (test). That's option 2.
+- **Flag on + NV disabled (N-1)**: exactly the 9 line changes in the option 3 row above (test: `test/avoid-policy.e2e-spec.ts`).
+- **Flag on + Part A config (NV still enabled)**: 9 lines change, but **#2035 and #2054 move to WH-NV zone 5**, which can't ship (N-1). #2051 and #2056 don't change because #2051 already went to NV. **So disable NV in config first, then turn on the flag.**
+- Orders created at or after `AVOID_UNTIL` are untouched (test). `AVOID_UNTIL` value = D-28 (**proposed**: start of Monday, ET, exclusive).
+
 ### Recommendation (proposed)
-**Option 3, time-boxed to Mon Oct 26 behind a flag; option 2 is the fallback until that code is reviewed and live.**
+**Option 3, now shippable behind config and off by default. Option 2 is the state with the flag off.**
 - Option 1 turns "slow" into "can't ship". Option 4 routes to a warehouse that can't ship (N-1). Both are out.
 - Option 3 gets the N-4 benefit (≈1.5 days saved at +$0.40) only where it's cheap, and keeps GA for the 70% where moving costs more than waiting.
 - Caveat to defend: today it also moved #2039 from zone 1 to zone 5 by using NJ's scarce MAG. A production version should skip a reroute that would take the alternative's last units.

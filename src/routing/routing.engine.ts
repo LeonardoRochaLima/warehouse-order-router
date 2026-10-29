@@ -4,11 +4,14 @@ import { Order } from '../domain/order';
 import { partner, RouteDecision, WarehouseReason } from '../domain/route-decision';
 import { StockView } from '../domain/stock-ledger';
 import { comparePriority, Warehouse, ZoneTable } from '../domain/warehouse';
+import { AvoidPolicy } from './avoid-policy';
 
 export interface RoutingContext {
   readonly warehouses: readonly Warehouse[];
   readonly zones: ZoneTable;
   readonly stock: StockView;
+  /** Q2 option 3; undefined = off (D-29) */
+  readonly avoid?: AvoidPolicy;
 }
 
 interface Eligible {
@@ -43,6 +46,20 @@ export class RoutingEngine {
         comparePriority(a.code, b.code), // R-07: priority list
     );
     const best = ranked[0]!;
+    const candidates = ranked.map((e) => ({ code: e.code, zone: e.zone, cover: coverToNumber(e.cover) }));
+
+    const alternative = this.avoidAlternative(order, best, ranked, ctx.avoid); // R-17
+    if (alternative) {
+      return {
+        kind: 'warehouse',
+        orderNumber,
+        target: alternative.code,
+        reason: 'zone_avoid',
+        zone: alternative.zone,
+        avoided: best.code,
+        candidates,
+      };
+    }
 
     return {
       kind: 'warehouse',
@@ -50,8 +67,18 @@ export class RoutingEngine {
       target: best.code,
       reason: this.reasonFor(best, ranked),
       zone: best.zone,
-      candidates: ranked.map((e) => ({ code: e.code, zone: e.zone, cover: coverToNumber(e.cover) })),
+      candidates,
     };
+  }
+
+  /**
+   * R-17, D-29: Q2 option 3. Uses the order's creation time, never the clock (D-28),
+   * and keeps the ranked order (zone → cover → priority) among the remaining warehouses.
+   */
+  private avoidAlternative(order: Order, best: Eligible, ranked: readonly Eligible[], avoid?: AvoidPolicy): Eligible | undefined {
+    if (!avoid || best.code !== avoid.code) return undefined;
+    if (order.createdAt.getTime() >= avoid.until.getTime()) return undefined; // D-28: exclusive
+    return ranked.find((e) => e.code !== avoid.code && e.zone - best.zone <= avoid.maxZoneDelta);
   }
 
   /** R-04: enabled, has a zone for this prefix, and holds every line in full (never split). */

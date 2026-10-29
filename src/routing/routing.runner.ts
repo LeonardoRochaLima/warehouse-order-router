@@ -3,6 +3,7 @@ import { RoutingInput } from '../data/data-loader.service';
 import { partner, RouteDecision } from '../domain/route-decision';
 import { StockLedger } from '../domain/stock-ledger';
 import { OrderAssemblerService } from '../orders/order-assembler.service';
+import { AvoidPolicy } from './avoid-policy';
 import { RoutingEngine } from './routing.engine';
 
 export interface RunResult {
@@ -18,10 +19,11 @@ export class RoutingRunner {
     private readonly engine: RoutingEngine,
   ) {}
 
-  run(input: RoutingInput): RunResult {
+  /** `avoid` = Q2 option 3 (R-17); omitted → plain rules 1–7 */
+  run(input: RoutingInput, avoid?: AvoidPolicy): RunResult {
     const { orders, warnings } = this.assembler.assemble(input.events, input.catalog);
     const ledger = new StockLedger(input.warehouses); // fresh copy per run; input is never mutated
-    const ctx = { warehouses: input.warehouses, zones: input.zones, stock: ledger };
+    const ctx = { warehouses: input.warehouses, zones: input.zones, stock: ledger, avoid };
 
     const decisions = orders.map((assembled): RouteDecision => {
       if (!assembled.order.ok) {

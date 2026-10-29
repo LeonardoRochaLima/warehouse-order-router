@@ -30,6 +30,19 @@ npm run build
 npm run start:prod
 ```
 
+Q2 option 3, "avoid a warehouse when another is within N zones" (off by default; [R-17](specs/02-requirements.md), [D-28/D-29](specs/03-decisions.md)):
+
+| env | meaning | default |
+|---|---|---|
+| `AVOID_WAREHOUSE` | warehouse to route away from, e.g. `WH-GA` | unset = off |
+| `AVOID_UNTIL` | ISO timestamp **with timezone**. Applies to orders *created* before it (order time, never the clock) | required when on |
+| `AVOID_MAX_ZONE_DELTA` | max extra zones accepted for the alternative | `1` |
+
+```bash
+AVOID_WAREHOUSE=WH-GA AVOID_UNTIL=2026-10-26T00:00:00-04:00 OUTPUT_FILE=./routes-avoid.txt npm start
+```
+Disable WH-NV in `warehouses.json` first (ops note N-1). Otherwise the flag moves two orders to NV (see 05-part-b §3a). Invalid values → exit 2.
+
 Part B what-if and traces (read-only; prints to stdout; never touches `routes.txt`):
 ```bash
 npm run what-if -- "#2034" "#2041" "#2050"
@@ -48,7 +61,7 @@ $env:DATA_DIR="./some/folder"; $env:OUTPUT_FILE="./out.txt"; npm start
 ## Tests (Jest + @nestjs/testing)
 | what | command |
 |---|---|
-| everything (unit + e2e), 151 tests | `npm test` |
+| everything (unit + e2e), 170 tests | `npm test` |
 | unit only (`src/**/*.spec.ts`) | `npm run test:unit` |
 | e2e only (`test/*.e2e-spec.ts`: acceptance criteria + CLI run) | `npm run test:e2e` |
 | one file | `npx jest src/routing/routing.engine.spec.ts` |
@@ -73,7 +86,9 @@ The golden file `test/fixtures/expected-routes.txt` came from an independent thr
 | `src/data/data-loader.service.spec.ts` | config validation, never reads ops-notes (D-24, R-16) |
 | `src/routing/routing.runner.spec.ts` | reservation between orders, invalid_order, bug guard (R-11, D-03) |
 | `src/part-b/scenario.spec.ts` | what-if scenarios reproduce Part A and the 05-part-b numbers; input never mutated |
+| `src/routing/avoid-policy.spec.ts` | AVOID_* parsing and validation (D-29) |
 | `test/acceptance.e2e-spec.ts` | AC-01..AC-16 on `data/`, CLI bytes/stdout/stderr/exit codes |
+| `test/avoid-policy.e2e-spec.ts` | option 3: flag off == routes.txt, exact moves with NV off and with NV on, AVOID_UNTIL boundary |
 
 ## How it works
 ```
@@ -87,7 +102,7 @@ data/*.json → DataLoaderService (DTO validation) → OrderAssemblerService (ed
 
 ## Decisions log
 Every choice the task text doesn't dictate (ZIP padding, `invalid_order`, cover before reservation, edit-window edges, config errors, …) is in
-**[specs/03-decisions.md](specs/03-decisions.md)** as D-00..D-27, with options, recommendation, impact on today's data and status. The code cites these ids in comments (`// R-06, D-12`).
+**[specs/03-decisions.md](specs/03-decisions.md)** as D-00..D-29, with options, recommendation, impact on today's data and status. The code cites these ids in comments (`// R-06, D-12`).
 
 ## Specs (the documentation)
 | file | contents |

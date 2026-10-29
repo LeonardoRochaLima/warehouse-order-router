@@ -52,6 +52,7 @@ events (file) → validate DTOs → group by orderNumber → apply valid edits (
 | R-14 | "prints one line per order" | every order | printing | one line per order in processing order: `orderNumber␣␣target␣␣reason`. The CLI writes them to `routes.txt` (UTF-8, LF) **and** to stdout. Logs go only to stderr (D-16, D-22) |
 | R-15 | guard rails | any malformed record | running | the run never crashes. The record becomes `PARTNER invalid_order` (if it's an order) or is ignored and logged (if it's an event). Exit code 0. Exit code 2 when a file is missing or unparseable, or a config file is invalid (D-24). Exit code 1 only for a bug (guard rail layer 4) |
 | R-16 | determinism | the same inputs | run twice | byte-identical output. `ops-notes.md` is never read |
+| R-17 | Part B Q2 option 3 (D-28, D-29) | `AVOID_WAREHOUSE=X` and the winner from R-05..R-07 is X and `order.createdAt < AVOID_UNTIL` | choosing | the best other eligible warehouse with zone ≤ X's zone + `AVOID_MAX_ZONE_DELTA` wins (`zone_avoid`). None → X. Flag unset → R-05..R-07 unchanged |
 
 ### Reason codes (fixed enum)
 | code | printed as | from |
@@ -64,6 +65,7 @@ events (file) → validate DTOs → group by orderNumber → apply valid edits (
 | `zone` | `WH-xx  zone N` | R-05 (a single warehouse had the lowest zone) |
 | `zone_tie_cover` | `WH-xx  zone N (tie: cover)` | R-06 decided it |
 | `zone_tie_priority` | `WH-xx  zone N (tie: priority)` | R-07 decided it |
+| `zone_avoid` | `WH-xx  zone N (avoid: WH-GA)` | R-17 moved it off the avoided warehouse (flag on only) |
 
 ## 4. Acceptance criteria (one test each, hand-checked against 01 §2)
 | AC | order | expected line | why |

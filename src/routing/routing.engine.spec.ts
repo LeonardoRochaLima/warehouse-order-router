@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { RoutingEngine } from './routing.engine';
 import { ctx, makeOrder, wh } from '../../test/helpers';
 import { WarehouseDecision } from '../domain/route-decision';
+import { ZoneTable } from '../domain/warehouse';
 
 const VITD = 'NW-VITD-60';
 const MAG = 'NW-MAG-90';
@@ -128,6 +129,44 @@ describe('RoutingEngine', () => {
       const z = { 'WH-ZZ': { '606': 5 }, 'WH-AA': { '606': 5 }, 'WH-TX': { '606': 5 } };
       expect(engine.route(order, ctx([wh('WH-ZZ', same), wh('WH-AA', same)], z))).toMatchObject({ target: 'WH-AA' });
       expect(engine.route(order, ctx([wh('WH-AA', same), wh('WH-TX', same)], z))).toMatchObject({ target: 'WH-TX' });
+    });
+  });
+
+  describe('R-17 avoid policy (Q2 option 3, D-28, D-29)', () => {
+    // order created 2026-10-20T13:00:00Z (makeOrder); zip 60614 → zone 5 at NJ/GA/NV/TX in `zones`
+    const UNTIL = new Date('2026-10-26T04:00:00Z');
+    const avoidCtx = (warehouses: ReturnType<typeof wh>[], z: ZoneTable, maxZoneDelta = 1, until = UNTIL) => ({
+      ...ctx(warehouses, z),
+      avoid: { code: 'WH-GA', until, maxZoneDelta },
+    });
+    const z = { 'WH-GA': { '606': 3 }, 'WH-NJ': { '606': 4 }, 'WH-NV': { '606': 5 } };
+    const order = () => makeOrder([{ sku: VITD, quantity: 1 }], { country: 'US', zip: '60614' });
+
+    it('moves the order to the best other warehouse within +1 zone', () => {
+      const d = engine.route(order(), avoidCtx([full('WH-GA'), full('WH-NJ'), full('WH-NV')], z));
+      expect(d).toMatchObject({ target: 'WH-NJ', zone: 4, reason: 'zone_avoid', avoided: 'WH-GA' });
+    });
+
+    it('keeps the avoided warehouse when nothing is within the delta', () => {
+      expect(engine.route(order(), avoidCtx([full('WH-GA'), full('WH-NV')], z))).toMatchObject({ target: 'WH-GA', reason: 'zone' });
+      expect(engine.route(order(), avoidCtx([full('WH-GA'), full('WH-NJ')], z, 0))).toMatchObject({ target: 'WH-GA' });
+    });
+
+    it('does nothing when the winner is another warehouse', () => {
+      const d = engine.route(order(), avoidCtx([full('WH-NJ'), full('WH-NV')], z));
+      expect(d).toMatchObject({ target: 'WH-NJ', reason: 'zone' });
+    });
+
+    it('does not affect orders created at or after AVOID_UNTIL (order time, not the clock)', () => {
+      const at = new Date('2026-10-20T13:00:00Z'); // makeOrder's createdAt
+      expect(engine.route(order(), avoidCtx([full('WH-GA'), full('WH-NJ')], z, 1, at))).toMatchObject({ target: 'WH-GA' });
+      const justAfter = new Date(at.getTime() + 1);
+      expect(engine.route(order(), avoidCtx([full('WH-GA'), full('WH-NJ')], z, 1, justAfter))).toMatchObject({ target: 'WH-NJ' });
+    });
+
+    it('never moves to an ineligible warehouse', () => {
+      const c = avoidCtx([full('WH-GA'), full('WH-NJ', false), wh('WH-NV', { [VITD]: [0, 1] })], { ...z, 'WH-NV': { '606': 3 } });
+      expect(engine.route(order(), c)).toMatchObject({ target: 'WH-GA' });
     });
   });
 
